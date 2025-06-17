@@ -1,0 +1,321 @@
+﻿=== C:/Users/Korisnik/Documents/projekti/localtekst/lib/maindart ===
+import 'package:flutter/material.dart';
+import 'features/folder_picker/screens/folder_selector_screen.dart';
+import 'features/internal_file/screens/internal_file_list_screen.dart';
+
+void main() {
+  runApp(const LocalTextApp());
+}
+
+class LocalTextApp extends StatefulWidget {
+  const LocalTextApp({super.key});
+
+  @override
+  State<LocalTextApp> createState() => _LocalTextAppState();
+}
+
+class _LocalTextAppState extends State<LocalTextApp> {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'LocalTekst',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      ),
+      routes: {
+        '/': (context) => const HomeScreen(),
+        '/select-folder': (context) => const FolderSelectorScreen(),
+        '/internal-files': (context) => const InternalFileListScreen(),
+      },
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('LocalTekst'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/select-folder');
+              },
+              child: const Text('Odaberi mapu'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/internal-files');
+              },
+              child: const Text('Pregled internih fajlova'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+=== C:/Users/Korisnik/Documents/projekti/localtekst/lib/features/folder_picker/screens/folder_selector_screendart ===
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:path_provider/path_provider.dart';
+
+class FolderSelectorScreen extends StatefulWidget {
+  const FolderSelectorScreen({super.key});
+
+  @override
+  State<FolderSelectorScreen> createState() => _FolderSelectorScreenState();
+}
+
+class _FolderSelectorScreenState extends State<FolderSelectorScreen> {
+  List<XFile> _files = [];
+
+  Future<void> _selectFolderAndListFiles() async {
+    final directory = await getDirectoryPath();
+    if (directory == null) return;
+
+    final folder = Directory(directory);
+    final allFiles = folder.listSync();
+    final txtFiles = allFiles
+        .where((f) =>
+            f is File &&
+            f.path.toLowerCase().endsWith('.txt'))
+        .map((f) => XFile(f.path))
+        .toList();
+
+    setState(() {
+      _files = txtFiles;
+    });
+  }
+
+  Future<void> _copySelectedFiles(List<XFile> selectedFiles) async {
+    final targetDir = await getApplicationDocumentsDirectory();
+    for (final file in selectedFiles) {
+      final fileName = file.name;
+      final newPath = '${targetDir.path}/$fileName';
+      await File(file.path).copy(newPath);
+      debugPrint('[KOPIRANO] ${file.path} -> $newPath');
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fajlovi kopirani.')),
+      );
+    }
+  }
+
+  final Set<XFile> _selected = {};
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Odaberite mapu'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.folder_open),
+            onPressed: _selectFolderAndListFiles,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: _files.length,
+              itemBuilder: (context, index) {
+                final file = _files[index];
+                final selected = _selected.contains(file);
+                return CheckboxListTile(
+                  title: Text(file.name),
+                  value: selected,
+                  onChanged: (value) {
+                    setState(() {
+                      if (value == true) {
+                        _selected.add(file);
+                      } else {
+                        _selected.remove(file);
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+          if (_files.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _copySelectedFiles(_files),
+                    child: const Text('Kopiraj sve'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => _copySelectedFiles(_selected.toList()),
+                    child: const Text('Kopiraj oznaÄŤene'),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+=== C:/Users/Korisnik/Documents/projekti/localtekst/lib/features/internal_file/screens/internal_file_list_screendart ===
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'song_text_screen.dart';
+
+class InternalFileListScreen extends StatefulWidget {
+  const InternalFileListScreen({super.key});
+
+  @override
+  State<InternalFileListScreen> createState() => _InternalFileListScreenState();
+}
+
+class _InternalFileListScreenState extends State<InternalFileListScreen> {
+  List<FileSystemEntity> txtFiles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadInternalTxtFiles();
+  }
+
+  void loadInternalTxtFiles() async {
+    final directory = Directory('build/copied_txt');
+    if (await directory.exists()) {
+      final files = directory
+          .listSync()
+          .where((f) => f.path.toLowerCase().endsWith('.txt'))
+          .toList();
+      setState(() {
+        txtFiles = files;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Interni fajlovi'),
+      ),
+      body: ListView.builder(
+        itemCount: txtFiles.length,
+        itemBuilder: (context, index) {
+          final file = txtFiles[index];
+          final name = file.uri.pathSegments.last;
+          return ListTile(
+            title: Text(name),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SongTextScreen(filePath: file.path),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+
+=== C:/Users/Korisnik/Documents/projekti/localtekst/lib/features/internal_file/screens/song_text_screendart ===
+import 'dart:io';
+import 'package:flutter/material.dart';
+
+class SongTextScreen extends StatefulWidget {
+  final String filePath;
+
+  const SongTextScreen({super.key, required this.filePath});
+
+  @override
+  State<SongTextScreen> createState() => _SongTextScreenState();
+}
+
+class _SongTextScreenState extends State<SongTextScreen> {
+  String fileContent = '';
+
+  @override
+  void initState() {
+    super.initState();
+    loadFile();
+  }
+
+  void loadFile() async {
+    final file = File(widget.filePath);
+    if (await file.exists()) {
+      final content = await file.readAsString();
+      setState(() {
+        fileContent = content;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.filePath.split(Platform.pathSeparator).last),
+      ),
+      body: Column(
+        children: [
+          // buduÄ‡a statiÄŤna dugmad
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: const [
+              Text("Dugme A"),
+              Text("Dugme B"),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // strelice (buduÄ‡e)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Icon(Icons.arrow_back),
+              Icon(Icons.arrow_forward),
+            ],
+          ),
+          const Divider(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                fileContent,
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
