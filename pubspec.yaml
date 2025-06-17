@@ -1,22 +1,24 @@
-name: saf_txt_viewer
-description: "A new Flutter project."
-publish_to: 'none' # privatni paket
+name: localtekst
+description: A Flutter app for selecting and copying txt files
+publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: ^3.8.0
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
   file_selector: ^1.0.3
+  path_provider: ^2.1.5
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.1
 
 flutter:
   uses-material-design: true

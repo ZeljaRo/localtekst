@@ -1,54 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:file_selector/file_selector.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'features/folder_picker/screens/folder_selector_screen.dart';
 
 void main() {
-  runApp(const MaterialApp(home: SafTxtViewer()));
+  runApp(const LocalTextApp());
 }
 
-class SafTxtViewer extends StatefulWidget {
-  const SafTxtViewer({super.key});
+class LocalTextApp extends StatefulWidget {
+  const LocalTextApp({super.key});
 
   @override
-  State<SafTxtViewer> createState() => _SafTxtViewerState();
+  State<LocalTextApp> createState() => _LocalTextAppState();
 }
 
-class _SafTxtViewerState extends State<SafTxtViewer> {
-  List<XFile> selectedFiles = [];
+class _LocalTextAppState extends State<LocalTextApp> {
+  @override
+  void initState() {
+    super.initState();
+    _requestPermissions();
+  }
 
-  Future<void> pickTxtFiles() async {
-    final txtGroup = XTypeGroup(
-      label: 'Text files',
-      extensions: ['txt'],
-    );
-
-    final files = await openFiles(acceptedTypeGroups: [txtGroup]);
-
-    if (files.isEmpty) return;
-
-    setState(() {
-      selectedFiles = files;
-    });
+  Future<void> _requestPermissions() async {
+    await Permission.storage.request();
+    await Permission.manageExternalStorage.request();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('SAF TXT Viewer')),
-      body: Column(
-        children: [
-          ElevatedButton(
-            onPressed: pickTxtFiles,
-            child: const Text('Odaberi TXT fajlove'),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: selectedFiles.length,
-              itemBuilder: (context, index) =>
-                  ListTile(title: Text(selectedFiles[index].name)),
-            ),
-          ),
-        ],
+    return MaterialApp(
+      title: 'LocalText',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.teal,
       ),
+      home: const FolderSelectorScreen(),
     );
   }
 }
